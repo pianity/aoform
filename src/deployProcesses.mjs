@@ -147,7 +147,7 @@ async function deployProcess(processInfo) {
   // Try sending the 'eval' action 5 times with a 30-second delay
   let attempts = 0;
   const maxAttempts = 5;
-  const delay = 30000; // 30 seconds
+  const delay = 3000; // 3 seconds
 
   console.log("Sending code...");
   while (attempts < maxAttempts) {
