@@ -17,16 +17,19 @@ const ao = connect({
   MU_URL: "http://localhost:4002",
 });
 
-console.log("AO: ", ao);
+console.log("AO connection details: ", ao);
 
 // Load the YAML file
 const processesYamlPath = path.join(process.cwd(), "processes.yaml");
 let processes = [];
 try {
+  console.log("Reading processes.yaml from: ", processesYamlPath);
   const processesYaml = fs.readFileSync(processesYamlPath, "utf8");
   processes = yaml.load(processesYaml);
+  console.log("Loaded processes: ", processes);
 } catch (err) {
   if (err.code !== "ENOENT") {
+    console.error("Error reading processes.yaml: ", err);
     throw err;
   }
   console.warn(
@@ -38,22 +41,29 @@ try {
 let state;
 try {
   const stateYamlPath = path.join(process.cwd(), "state.yaml");
+  console.log("Reading state.yaml from: ", stateYamlPath);
   const stateYaml = fs.readFileSync(stateYamlPath, "utf8");
   state = yaml.load(stateYaml);
+  console.log("Loaded state: ", state);
 } catch (err) {
   if (err.code === "ENOENT") {
+    console.log("state.yaml not found. Initializing empty state.");
     state = {};
   } else {
+    console.error("Error reading state.yaml: ", err);
     throw err;
   }
 }
 
 // Function to get the hash of a file
 function getFileHash(filePath) {
+  console.log("Calculating hash for file: ", filePath);
   const fileBuffer = fs.readFileSync(filePath);
   const hashSum = crypto.createHash("sha256");
   hashSum.update(fileBuffer);
-  return hashSum.digest("hex");
+  const hash = hashSum.digest("hex");
+  console.log("File hash: ", hash);
+  return hash;
 }
 
 // Function to deploy a process
@@ -63,6 +73,9 @@ async function deployProcess(processInfo) {
   const tags = processInfo.tags || [];
   const currentHash = getFileHash(filePath);
   const prerunFilePath = processInfo.prerun || ""; // Get the prerun file path, or an empty string if not provided
+
+  console.log("Deploying process: ", name);
+  console.log("Process info: ", processInfo);
 
   // Check if the process has already been deployed
   if (state[name]) {
@@ -76,11 +89,13 @@ async function deployProcess(processInfo) {
   }
 
   // Load the Lua file
+  console.log("Loading main script from: ", filePath);
   const mainScript = fs.readFileSync(filePath, "utf8");
 
   // Load the prerun script, if provided
   let prerunScript = "";
   if (prerunFilePath) {
+    console.log("Loading prerun script from: ", prerunFilePath);
     prerunScript = fs.readFileSync(prerunFilePath, "utf8");
   }
 
@@ -123,12 +138,12 @@ async function deployProcess(processInfo) {
         break;
       } catch (err) {
         spawnAttempts++;
-        console.log("err", err);
+        console.log("Error spawning process:", err);
         console.log(
           `Failed to spawn process '${name}'. Attempt ${spawnAttempts}/${maxSpawnAttempts}`
         );
         if (spawnAttempts === maxSpawnAttempts) {
-          console.error("error", err);
+          console.error("Error spawning process:", err);
           console.error(
             `Failed to spawn process '${name}' after ${maxSpawnAttempts} attempts.`
           );
@@ -149,9 +164,9 @@ async function deployProcess(processInfo) {
   // Try sending the 'eval' action 5 times with a 30-second delay
   let attempts = 0;
   const maxAttempts = 5;
-  const delay = 3000; // 3 seconds
+  const delay = 5000; // 5 seconds
 
-  console.log("Sending code...");
+  console.log("Sending code to process ID:", processId);
   while (attempts < maxAttempts) {
     try {
       const r = await ao.message({
@@ -166,11 +181,11 @@ async function deployProcess(processInfo) {
         signer,
       });
       console.log(`Successfully sent 'eval' action for process '${name}'.`);
-      console.log(r);
+      console.log("Response: ", r);
       break;
     } catch (err) {
       attempts++;
-      console.error("error", err);
+      console.error("Error sending 'eval' action:", err);
 
       console.log(
         `Failed to send 'eval' action for process '${name}'. Attempt ${attempts}/${maxAttempts}`
@@ -187,6 +202,7 @@ async function deployProcess(processInfo) {
   }
 
   // Update the state
+  console.log(`Updating state for process '${name}'`);
   state[name] = {
     processId,
     hash: currentHash,
@@ -194,13 +210,16 @@ async function deployProcess(processInfo) {
 }
 
 export async function deployProcesses() {
+  console.log("Deploying processes...");
   // Deploy or update processes
   for (const processInfo of processes) {
     await deployProcess(processInfo);
   }
 
   // Save the updated state
+  console.log("Saving updated state to state.yaml");
   const updatedState = yaml.dump(state);
   const stateYamlPath = path.join(process.cwd(), "state.yaml");
   fs.writeFileSync(stateYamlPath, updatedState, "utf8");
+  console.log("Updated state saved successfully.");
 }
