@@ -17,7 +17,7 @@ const ao = connect({
   MU_URL: "http://localhost:4002",
 });
 
-console.log(ao);
+console.log("AO: ", ao);
 
 // Load the YAML file
 const processesYamlPath = path.join(process.cwd(), "processes.yaml");
@@ -98,6 +98,8 @@ async function deployProcess(processInfo) {
   const wallet = JSON.parse(process.env.WALLET_JSON); // Read wallet from environment variable
   const signer = createDataItemSigner(wallet);
 
+  console.log("Wallet: ", wallet);
+  console.log("Signer: ", signer);
   console.log("Spawning process...", {
     module: processInfo.module,
     scheduler: processInfo.scheduler,
