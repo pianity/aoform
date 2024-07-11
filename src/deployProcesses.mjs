@@ -68,7 +68,7 @@ async function deployProcess(ao, processInfo, state) {
   if (!state[name] || !state[name].processId) {
     let spawnAttempts = 0;
     const maxSpawnAttempts = 5;
-    const spawnDelay = 30000; // 30 seconds
+    const spawnDelay = 5000; // 5 seconds
 
     while (spawnAttempts < maxSpawnAttempts) {
       try {
@@ -99,10 +99,13 @@ async function deployProcess(ao, processInfo, state) {
     console.log(`Using existing process ID '${processId}' for process '${name}'.`);
   }
 
-  // Try sending the 'eval' action 5 times with a 30-second delay
+  // Try sending the 'eval' action 5 times with a 2 second delay
   let attempts = 0;
   const maxAttempts = 5;
-  const delay = 30000; // 30 seconds
+  const delay = 2000; // 2 seconds
+
+  // Initial 0.5s wait for the spawn
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   console.log("Sending code...")
   while (attempts < maxAttempts) {
