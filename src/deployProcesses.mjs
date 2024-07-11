@@ -124,7 +124,13 @@ async function deployProcess(ao, processInfo, state) {
       console.log(`Successfully sent 'eval' action for process '${name}'.`);
       console.log('Eval message id', r);
 
-      console.log('view result on ao.link:')
+      console.log('Computing eval result...');
+      const res = await ao.result({
+        process: processId,
+        message: r
+      });
+      console.log('Eval result:', res);
+      console.log('View result on ao.link:')
       console.log(`https://www.ao.link/#/message/${r}`)
       break;
     } catch (err) {
