@@ -13,6 +13,7 @@ program
   .command('apply')
   .description('Deploy or update processes')
   .option('-f, --file <path>', 'Specify a custom processes.yaml file')
+  .option('-l, --local', 'Deploy processes to localnet')
   .action(applyCommand);
 
 program

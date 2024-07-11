@@ -18,12 +18,7 @@ function getFileHash(filePath) {
 }
 
 // Function to deploy a process
-async function deployProcess(processInfo, state) {
-
-  // Connect to the AO network
-  const ao = connect();
-
-  console.log(ao)
+async function deployProcess(ao, processInfo, state) {
   const name = processInfo.name;
   const filePath = processInfo.file;
   const tags = processInfo.tags || [];
@@ -150,8 +145,9 @@ async function deployProcess(processInfo, state) {
   };
 }
 
-export async function deployProcesses(customFilePath) {
+export async function deployProcesses(options) {
   // Load the YAML file
+  const customFilePath = options.file;
   const stateFile = customFilePath ? 'state-' + customFilePath : 'state.yaml'
   const processesYamlPath = path.join(process.cwd(), customFilePath || 'processes.yaml');
   let processes = [];
@@ -178,9 +174,22 @@ export async function deployProcesses(customFilePath) {
       throw err;
     }
   }
+  // Connect to the AO network
+  const ao = connect(
+    options.local
+      ? {
+          CU_URL: "http://localhost:4004",
+          MU_URL: "http://localhost:4002",
+          GATEWAY_URL: "http://localhost:4000",
+          GRAPHQL_URL: "http://localhost:4000/graphql",
+        }
+      : undefined
+  );
+  console.log(`Connected to AO network${options.local ? " [localnet]" : ""}`);
+
   // Deploy or update processes
   for (const processInfo of processes) {
-    await deployProcess(processInfo, state);
+    await deployProcess(ao, processInfo, state);
   }
 
   // Save the updated state
