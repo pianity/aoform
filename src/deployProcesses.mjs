@@ -7,7 +7,9 @@ import yaml from 'js-yaml';
 import fs from 'fs';
 import crypto from 'crypto';
 import path from 'path';
-import { connect, createDataItemSigner } from '@permaweb/aoconnect';
+import { connect } from '@permaweb/aoconnect';
+
+import { getDataItemSigner } from './signer.mjs';
 
 // Function to get the hash of a file
 function getFileHash(filePath) {
@@ -18,7 +20,7 @@ function getFileHash(filePath) {
 }
 
 // Function to deploy a process
-async function deployProcess(ao, processInfo, state) {
+async function deployProcess(ao, processInfo, state, signer, options) {
   const name = processInfo.name;
   const filePath = processInfo.file;
   const tags = processInfo.tags || [];
@@ -26,7 +28,7 @@ async function deployProcess(ao, processInfo, state) {
   const prerunFilePath = processInfo.prerun || ''; // Get the prerun file path, or an empty string if not provided
 
   // Check if the process has already been deployed
-  if (state[name]) {
+  if (state[name] && !options.force) {
     const processState = state[name];
     const lastHash = processState.hash;
 
@@ -48,34 +50,26 @@ async function deployProcess(ao, processInfo, state) {
   // Concatenate the prerun script with the main script
   const luaCode = `${prerunScript}\n${mainScript}`;
 
-  if (!process.env.WALLET_JSON) {
-    console.error("Missing WALLET_JSON environment variable. Please provide the wallet JSON in the environment variable WALLET_JSON.");
-    process.exit(1);
-  }
 
   let processId;
-  const wallet = JSON.parse(process.env.WALLET_JSON); // Read wallet from environment variable
-  const signer = createDataItemSigner(wallet);
-
-  console.log("Spawning process...", {
-    module: processInfo.module,
-    scheduler: processInfo.scheduler,
-    signer,
-    tags,
-  })
-
-
   if (!state[name] || !state[name].processId) {
     let spawnAttempts = 0;
     const maxSpawnAttempts = 5;
     const spawnDelay = 5000; // 5 seconds
+
+    console.log("Spawning process...", {
+      module: processInfo.module,
+      scheduler: processInfo.scheduler,
+      signer,
+      tags,
+    })
 
     while (spawnAttempts < maxSpawnAttempts) {
       try {
         processId = await ao.spawn({
           module: processInfo.module,
           scheduler: processInfo.scheduler,
-          signer: createDataItemSigner(wallet),
+          signer,
           tags,
         });
         console.log("Spawned process:", processId);
@@ -196,9 +190,10 @@ export async function deployProcesses(options) {
   );
   console.log(`Connected to AO network${options.local ? " [localnet]" : ""}`);
 
+  const signer = getDataItemSigner(options.wallet);
   // Deploy or update processes
   for (const processInfo of processes) {
-    await deployProcess(ao, processInfo, state);
+    await deployProcess(ao, processInfo, state, signer, options);
   }
 
   // Save the updated state

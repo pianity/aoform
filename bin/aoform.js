@@ -13,7 +13,9 @@ program
   .command('apply')
   .description('Deploy or update processes')
   .option('-f, --file <path>', 'Specify a custom processes.yaml file')
+  .option('-w, --wallet <path>', 'Specify a custom wallet file')
   .option('-l, --local', 'Deploy processes to localnet')
+  .option('--force', 'Ignores file hash check to apply code')
   .action(applyCommand);
 
 program
